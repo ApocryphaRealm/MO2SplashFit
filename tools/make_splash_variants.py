@@ -15,7 +15,7 @@ Three ways to stretch a master to another shape (--mode):
 Needs Python 3 and Pillow (pip install pillow). Examples:
 
   python make_splash_variants.py my-splash.png
-  python make_splash_variants.py my-splash.png --corner 170 --text-box 238 501 1900 697 --out "C:\Modlists\My List\splash"
+  python make_splash_variants.py my-splash.png --corner 170 --text-box 238 501 1900 697 --out "<your list's MO2 folder>\splash"
   python make_splash_variants.py screenshot.png --mode cover --height 1440
 
 A preview.png contact sheet of every shape is written beside the script's output folder (not inside it, so MO2 Splash

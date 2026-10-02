@@ -1,47 +1,47 @@
 # MO2 reference - the start-up splash (for MO2SplashFit.py), read 2026-10-02
 
-Preflight rule: a plugin of ours that touches an MO2 feature records how MO2 itself implements that feature. Source:
-`ModOrganizer2/modorganizer` at tag **v2.5.2**, `src/moapplication.cpp`.
+Preflight rule: a plugin of ours that touches an MO2 feature records how MO2 itself implements that feature.
 
-**When the splash is made**
-- `MOApplication::doOneRun()` constructs `MOSplash splash(*m_settings, m_instance->directory(), m_instance->gamePlugin())`
-  right after the "splash" timing point, before the main window, and closes it with `splash.close()` just before
-  `exec()`.
-- So the file is read at the start of EVERY run, including the re-runs `doOneRun` makes after an instance change or
-  restart.
-- Plugins load EARLIER in the same function: `m_plugins = std::make_unique<PluginContainer>(...)` and
-  `m_plugins->loadPlugins()` at the "plugins" timing point (lines 268-272), then OrganizerCore setup, then the splash
-  (line 316). So a plugin's `init()` can write `splash.png` and MO2 shows the result on that same start.
-- Corrected 2026-10-02. The first build believed plugins initialise after the splash, so it fitted only for the next
-  start. The owner, on the first start after a display change: "The image that appeared just now was a lot smaller
-  than the screen."
+**MO2 version:** 2.5.2 (tag `v2.5.2` of `ModOrganizer2/modorganizer`).
 
-**Which monitor** (`src/settings.cpp`)
-- `GeometrySettings::centerOnMainWindowMonitor` reads `[Geometry] MainWindow_monitor` from `ModOrganizer.ini`, an
-  index into `QGuiApplication::screens()`, and `centerOnMonitor` falls back to the primary screen when it is -1 or out
-  of range. `saveMainWindowMonitor` writes it when the main window closes.
+**Source read:**
+- [src/moapplication.cpp](https://github.com/ModOrganizer2/modorganizer/blob/v2.5.2/src/moapplication.cpp):
+  `MOApplication::doOneRun`, `MOSplash`, `MOSplash::getSplashPath`.
+- [src/settings.cpp](https://github.com/ModOrganizer2/modorganizer/blob/v2.5.2/src/settings.cpp):
+  `GeometrySettings::centerOnMainWindowMonitor`, `centerOnMonitor`, `saveMainWindowMonitor`.
 
-**Which file**
-- `MOSplash::getSplashPath()` returns nothing when `settings.useSplash()` is off.
-- Otherwise it takes `<dataPath>/splash.png` if it exists and loads as a QImage.
-- Failing that it falls back to the game plugin's `:/<shortName>/splash` resource, which it SAVES to
-  `<dataPath>/splash.png` (so a missing splash.png is recreated from the game plugin's), and finally to
-  `:/MO/gui/splash`.
+## What MO2 does
 
-**How it is shown**
-- `QPixmap image(splashPath); ss_.reset(new QSplashScreen(image)); settings.geometry().centerOnMainWindowMonitor(ss_.get()); ss_->show();`
-- No scaling by MO2. The pixmap has a device-pixel ratio of 1, so its pixel size is its LOGICAL size, and Qt scales it
-  by the monitor's display scaling.
-- So a splash fills the monitor only when its pixels equal the monitor's logical size. For example 3840x2160 at 175%
-  is 2194x1234; the 2133x1200 splash covered about 97% of it.
+| Step | MO2 2.5.2 | Where |
+|---|---|---|
+| Plugins load | `m_plugins = std::make_unique<PluginContainer>(...)`, then `m_plugins->loadPlugins()` | moapplication.cpp 268-272 |
+| Splash made | `MOSplash splash(*m_settings, m_instance->directory(), m_instance->gamePlugin())`, after OrganizerCore setup and before the main window | moapplication.cpp 314-316 |
+| Splash closed | `splash.close()` just before the main loop | moapplication.cpp 358 |
+| Which file | Nothing if `settings.useSplash()` is off. Otherwise `<dataPath>/splash.png` if it loads as a QImage. Failing that, the game plugin's `:/<shortName>/splash`, which it SAVES as `<dataPath>/splash.png`. Finally `:/MO/gui/splash`. | moapplication.cpp 687-722 |
+| How shown | `QPixmap image(splashPath); ss_.reset(new QSplashScreen(image)); centerOnMainWindowMonitor(...)`. No scaling by MO2: the pixmap's pixel size is its LOGICAL size, which Qt scales by the monitor's display scaling. | moapplication.cpp 657-676 |
+| Which monitor | `[Geometry] MainWindow_monitor` from `ModOrganizer.ini`, an index into `QGuiApplication::screens()`. The primary screen when it is -1 or out of range. Written by `saveMainWindowMonitor` when the main window closes. | settings.cpp 926-968 |
 
-**How MO2 Splash Fit follows it**
-- In `init()`, before MO2 reads the file, it writes `<instance>/splash.png` at the logical size of the monitor
-  `centerOnMainWindowMonitor` will use. It reads the same INI key, with the same primary-screen fallback.
-- When the main window opens (`onUserInterfaceInitialized`), it checks that window's monitor again and refits for the
-  next start if the window landed elsewhere.
-- "Already fitted" also requires the `splash.png` on disk to be at that size, so a file replaced by an author, or
-  recreated by MO2 from the game plugin, is fitted again.
-- It writes only when the source art or the size changes.
-- The original is kept once as `splash-original.png`.
-- It never touches `useSplash`.
+So the splash is read on every run, including the re-runs `doOneRun` makes after an instance change. It fills the
+monitor only when its pixels equal the monitor's logical size: for example 3840x2160 at 175% is 2194x1234, and a
+2133x1200 splash covers about 97% of it.
+
+## What MO2 Splash Fit does, and how it follows MO2
+
+| Ours | Follows MO2 how |
+|---|---|
+| Fits `<instance>/splash.png` in `init()` | Plugins load before `MOSplash` is made, so the fitted file is the one shown on the same start. |
+| Uses the monitor from `[Geometry] MainWindow_monitor`, else primary | Same key and same fallback as `centerOnMainWindowMonitor`. Read-only, through QSettings. |
+| Fits to `QScreen.size()` (logical pixels) | `QSplashScreen` shows the pixmap at its pixel size as logical pixels. |
+| Picks the closest-shaped `splash/splash-*.png`, scales to cover, centre-crops | Not an MO2 feature: MO2 has one file and never resizes it. |
+| "Already fitted" also needs the file on disk to be that size | MO2 recreates a missing `splash.png` from the game plugin, at the wrong size; that is fitted again. |
+| Checks the main window's monitor in `onUserInterfaceInitialized` | Backstop: if the window lands elsewhere, the next start's splash is fitted there. |
+| Keeps the original once as `splash-original.png`; never touches `useSplash` | MO2's own setting stays the player's. |
+
+## Departures to revisit
+
+- **Corrected 2026-10-02.** The first build believed plugins initialise after the splash, so it fitted only for the
+  next start. The owner, on the first start after a display change: "The image that appeared just now was a lot
+  smaller than the screen." Re-read before relying on the order in a later MO2 release (2.6+): if `MOSplash` ever
+  moves above `loadPlugins`, the backstop still fits for the next start, and the README's claim of "same start" has to
+  change.
+- A monitor index saved by MO2 on a since-unplugged screen falls back to primary in both MO2 and ours.
