@@ -1,6 +1,6 @@
 """Offline test of MO2SplashFit.py: a stub mobase, PyQt6 offscreen, a scratch instance with a splash folder.
 
-Checks: the closest shape is chosen and written at the screen's logical size; a second run writes nothing; the
+Checks: init() fits splash.png to MO2's saved splash monitor (before MO2 reads it); the closest shape is chosen and written at the screen's logical size; a second run writes nothing; the
 original is kept once; the setting turns it off; a missing folder is logged, not raised.
 Run: python tools/test_offline.py
 """
@@ -89,6 +89,20 @@ try:
     org.cb(win)
     check(os.path.getmtime(os.path.join(base, "splash.png")) == mtime and "already fitted" in logs[-1], "second run writes nothing")
     check(QImage(os.path.join(base, "splash-original.png")).width() == 640, "original not overwritten by the fitted one")
+
+    # first start on a new display: init() runs before MO2 reads splash.png, with no window yet
+    for monitor in ("0", "7"):            # MO2's saved splash monitor; 7 does not exist -> primary, as MO2 does
+        small = QImage(320, 180, QImage.Format.Format_RGB32)
+        small.fill(QColor("white"))
+        small.save(os.path.join(base, "splash.png"))
+        with open(os.path.join(base, "ModOrganizer.ini"), "w", encoding="utf-8") as fh:
+            fh.write(f"[Geometry]\nMainWindow_monitor={monitor}\n")
+        logs.clear()
+        p2 = mod.MO2SplashFit()
+        p2.init(org)
+        out = QImage(os.path.join(base, "splash.png"))
+        check((out.width(), out.height()) == (scr.width(), scr.height()) and "fitted" in logs[-1],
+              f"init fits splash.png before MO2 reads it (MainWindow_monitor={monitor})")
 
     org.enabled = False
     logs.clear()

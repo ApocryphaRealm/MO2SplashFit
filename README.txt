@@ -7,7 +7,7 @@ its resolution, shape (16:9, 16:10, 21:9, 4:3...) or Windows display scaling.
 
 MO2 shows splash.png at the picture's own pixel size, so a single picture is too small, cut off, or barred on most
 screens. With this plugin you ship the splash at several shapes. On every player's PC, the plugin sizes the closest one
-to their monitor and writes it as splash.png. MO2 shows it from the next start.
+to their monitor and writes it as splash.png just before MO2 shows it, so it fits from the very first start.
 
 THIS IS NOT A MOD. Do not install it with the mod manager.
 
@@ -20,7 +20,7 @@ INSTALLATION (in your modlist's MO2 folder)
 1. Copy plugins\MO2SplashFit.py into the MO2 folder's "plugins" folder.
 2. Make a folder named "splash" next to splash.png. Put your splash in it at several shapes, named splash-<anything>.png
    (for example splash-16x9.png, splash-21x9.png, splash-4x3.png). The shape is read from each picture.
-3. Start MO2. From the second start on, the splash fills the screen.
+3. Start MO2. The splash fills the screen, and keeps fitting after any change of resolution or display scaling.
 
 For a Wabbajack list, ship the plugin and the splash folder among the files your list installs into the MO2 folder.
 

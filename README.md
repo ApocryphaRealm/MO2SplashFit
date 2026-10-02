@@ -20,16 +20,18 @@ No single picture fits every player.
    * `splash-16x9.png`, `splash-16x10.png`, `splash-21x9.png`, `splash-4x3.png` and so on;
    * any file named `splash-*.png` counts;
    * the shape is read from each picture, so the names are only for you.
-2. When MO2's window opens, **the plugin** does four things:
-   * reads the monitor the window is on;
+2. As MO2 starts, **the plugin** does four things:
+   * reads the monitor MO2 is about to show its splash on;
    * picks the picture whose shape is closest;
    * scales it to that monitor's exact size, trimming a sliver if the shape is not identical;
    * writes it over `splash.png`.
-3. **MO2** shows that file on every start after.
+3. **MO2** shows that file moments later.
 
-MO2 reads `splash.png` before any plugin loads, so a plugin can only prepare the file for the next start. The first start
-on a new screen still shows the old splash; every start after fits. `MO2-REFERENCE.md` traces this through MO2's source
-(`moapplication.cpp`, `MOSplash`, v2.5.2).
+MO2 loads its plugins just before it reads `splash.png`, so the fit happens on the same start, including the very first
+one on a player's PC and the first after any change of resolution or scaling. The plugin takes the monitor from the same
+setting MO2 uses (`[Geometry] MainWindow_monitor` in `ModOrganizer.ini`). When the main window opens it checks again, in
+case the window landed on another monitor. `MO2-REFERENCE.md` traces this through MO2's source (`moapplication.cpp`,
+`settings.cpp`, v2.5.2).
 
 The plugin writes nothing unless the chosen picture or the screen size has changed. It keeps your original `splash.png`
 once, as `splash-original.png`.

@@ -8,7 +8,18 @@ Preflight rule: a plugin of ours that touches an MO2 feature records how MO2 its
   right after the "splash" timing point, before the main window, and closes it with `splash.close()` just before
   `exec()`.
 - So the file is read at the start of EVERY run, including the re-runs `doOneRun` makes after an instance change or
-  restart. Plugins initialise later, so a plugin can only prepare `splash.png` for the next run.
+  restart.
+- Plugins load EARLIER in the same function: `m_plugins = std::make_unique<PluginContainer>(...)` and
+  `m_plugins->loadPlugins()` at the "plugins" timing point (lines 268-272), then OrganizerCore setup, then the splash
+  (line 316). So a plugin's `init()` can write `splash.png` and MO2 shows the result on that same start.
+- Corrected 2026-10-02. The first build believed plugins initialise after the splash, so it fitted only for the next
+  start. The owner, on the first start after a display change: "The image that appeared just now was a lot smaller
+  than the screen."
+
+**Which monitor** (`src/settings.cpp`)
+- `GeometrySettings::centerOnMainWindowMonitor` reads `[Geometry] MainWindow_monitor` from `ModOrganizer.ini`, an
+  index into `QGuiApplication::screens()`, and `centerOnMonitor` falls back to the primary screen when it is -1 or out
+  of range. `saveMainWindowMonitor` writes it when the main window closes.
 
 **Which file**
 - `MOSplash::getSplashPath()` returns nothing when `settings.useSplash()` is off.
@@ -25,8 +36,12 @@ Preflight rule: a plugin of ours that touches an MO2 feature records how MO2 its
   is 2194x1234; the 2133x1200 splash covered about 97% of it.
 
 **How MO2 Splash Fit follows it**
-- It writes `<instance>/splash.png` at the logical size of the monitor MO2's main window is on (the monitor
-  `centerOnMainWindowMonitor` uses).
+- In `init()`, before MO2 reads the file, it writes `<instance>/splash.png` at the logical size of the monitor
+  `centerOnMainWindowMonitor` will use. It reads the same INI key, with the same primary-screen fallback.
+- When the main window opens (`onUserInterfaceInitialized`), it checks that window's monitor again and refits for the
+  next start if the window landed elsewhere.
+- "Already fitted" also requires the `splash.png` on disk to be at that size, so a file replaced by an author, or
+  recreated by MO2 from the game plugin, is fitted again.
 - It writes only when the source art or the size changes.
 - The original is kept once as `splash-original.png`.
 - It never touches `useSplash`.
